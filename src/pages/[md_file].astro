@@ -1,0 +1,103 @@
+---
+import { Markdown } from '@astropub/md';
+import MarkdownWrapper from '@components/MarkdownWrapper.svelte';
+import SidebarToc from '@components/SidebarToc.svelte';
+import PipelinePageLayout from '@layouts/PipelinePageLayout.astro';
+import pipeline from '@public/pipeline_info.json';
+import cache from 'bin/cache';
+
+export function getStaticPaths() {
+    var paths: { params: { md_file: string }; props: { md_files } }[] = [];
+    const md_files = pipeline.md_files.map((file) => file.replace('docs/', '').replace('.md', ''));
+    md_files.forEach((md_file) => {
+        paths.push({
+            params: {
+                md_file: md_file
+            },
+            props: {
+                md_files: md_files
+            },
+        });
+    });
+    return paths;
+}
+
+const { md_file } = Astro.params;
+const { md_files } = Astro.props;
+let headings = [];
+
+let tabItems = md_files.map((file) => {
+    const f = file.split('/');
+    const fName = f[f.length - 1];
+    return {
+        label: fName.replace(/-/g, ' ').replace(/\w\S*/g, (txt) => {
+            return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+        }),
+        href: fName,
+        active: file === md_file,
+    };
+});
+const cache_key = `docs/${md_file}.md`;
+
+const md_content = await cache
+    .get(cache_key)
+    .catch((error) => {
+        console.log(error);
+        return { definitions: {} };
+    })
+    .then((response) => {
+        let content = response;
+        if (content === undefined) {
+            console.log(`Cache miss for ${cache_key}`);
+        }
+
+        const text_content = content.replace(/```(.*?)```/gs, '');
+        // get headings and their depth for table of contents
+        headings = text_content.match(/^(#{1,6})\s(.*)$/gm).map((heading) => {
+            const depth = heading.match(/^(#{1,6})/)[0].length;
+            let text = heading.match(/^(#{1,6})\s(.*)$/)[2];
+            // check if exactly two backticks are used to wrap text
+            if (text.match(/`(.+?)`/g)) {
+                text = text.replace(/`(.+?)`/g, '<code>$1</code>');
+                const slug = text
+                    .replace(/<code>(.*?)<\/code>/g, '$1')
+                    .toLowerCase()
+                    .replace(/ /g, '-')
+                    .replace(/[^\w-]+/g, '');
+                return { depth, text, slug };
+            } else {
+                const slug = text
+                    .toLowerCase()
+                    .replace(/ /g, '-')
+                    .replace(/[^\w-]+/g, '');
+                return { depth, text, slug };
+            }
+        });
+        return content;
+    });
+
+const max_heading_depth = 2;
+// filter out headings that are higher than max_heading_depth
+headings = headings.filter((h) => h.depth <= max_heading_depth);
+---
+
+<PipelinePageLayout
+    pipeline={pipeline.name}
+    subtitle={pipeline.description}
+    headings={headings}
+    version={pipeline.current_tag}
+    versions={pipeline.releases.map((release) => release.tag_name)}
+    tabItems={tabItems}
+    md_github_url={`https://github.com/${pipeline.owner.login}/${pipeline.name}/blob/${pipeline.current_tag}/docs/${md_file}.md`}
+>
+    <div class="row">
+        <div class="col-12 col-md-9 pt-3">
+            <MarkdownWrapper client:load headings={headings}>
+                <Markdown of={md_content} />
+            </MarkdownWrapper>
+        </div>
+        <div class="col-12 col-md-3 toc">
+            <SidebarToc headings={headings} client:idle />
+        </div>
+    </div>
+</PipelinePageLayout>
