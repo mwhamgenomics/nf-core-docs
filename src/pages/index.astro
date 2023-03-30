@@ -7,7 +7,6 @@ import pipeline from '@public/pipeline_info.json';
 import cache from 'bin/cache';
 import { formatDistance } from 'date-fns';
 
-
 let tabItems = pipeline.md_files.map((file) => {
     const f = file.split('/');
     const fName = f[f.length - 1].replace('.md', '');
@@ -35,6 +34,7 @@ const md_content = await cache
 
 <PipelinePageLayout
     pipeline={pipeline.name}
+    org={pipeline.owner.login}
     subtitle={pipeline.description}
     version={pipeline.current_tag}
     versions={pipeline.releases}

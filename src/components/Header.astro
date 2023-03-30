@@ -10,7 +10,8 @@ let {
     header_btn_text,
     event_header,
 } = Astro.props;
-title = title.replace('nf-core/', 'nf-core/<wbr>');
+const [org, name] = title.split('/');
+title = `${org}/<wbr>${name}`;
 ---
 
 <div class="mainpage-heading pb-1 text-bg-success">

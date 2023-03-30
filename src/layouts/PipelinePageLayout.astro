@@ -13,7 +13,7 @@ export interface Props {
     md_github_url: string;
 }
 
-const { pipeline, subtitle, version, versions = [], tabItems = [], md_github_url = '' } = Astro.props;
+const { pipeline, org, subtitle, version, versions = [], tabItems = [], md_github_url = '' } = Astro.props;
 tabItems.unshift({
     label: 'Introduction',
     href: `/`,
@@ -31,11 +31,11 @@ if (schema !== undefined) {
         icon: 'fa-regular fa-list',
     });
 }
-const gh_url = 'https://github.com/nf-core/' + pipeline;
+const gh_url = `https://github.com/${org}/${pipeline}`;
 ---
 
 <PageLayout
-    title={'nf-core/' + pipeline}
+    title={`${org}/${pipeline}`}
     subtitle={subtitle}
     mainpage_container={true}
     md_github_url={md_github_url}
